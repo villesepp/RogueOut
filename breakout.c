@@ -50,17 +50,22 @@ typedef struct Brick {
 	Texture2D	texture;
 	Color   	color;
     int 	    hitpoints;
+	int			type;
     bool    	active;
     bool    	collidable;
     bool    	visible;
-    
 } Brick;
+
+typedef struct Game {
+    int 	    coins;
+} Game;
+
 
 typedef struct { // remember to update textures count below!
     Texture2D *texture;
 } Terrain;
 
-#define TEXTURE_COUNT 5
+#define TEXTURE_COUNT 6
 Texture2D textures[TEXTURE_COUNT];
 
 // globals
@@ -72,21 +77,22 @@ static bool pause = false;
 
 static Player player = { 0 };
 static Ball ball = { 0 };
+static Game game = { 0 };
 static Brick brick[LINES_OF_BRICKS][BRICKS_PER_LINE] = { 0 };
 static Vector2 brickSize = { 0 };
 
 // prototypes
-static void Inits(void);         
+static void Inits(void);
 static void UpdateGame(void);    
 static void DrawGame(void);   
 static void UpdateDrawFrame(void);
+static void LoadTextures(void);
 
-// static void InitTextures(void);
 // static void Unload(void);
 
 int main(void)
 {
-    InitWindow(screenWidth, screenHeight, "DungeonBreak");
+    InitWindow(screenWidth, screenHeight, "RogueOut!");
 
 	// music stuff, move
 	InitAudioDevice();              
@@ -118,13 +124,14 @@ int main(void)
     return 0;
 }
 
-void LoadTextures()
+void LoadTextures() // REMEMBER TO UPDATE #define TEXTURE_COUNT
 {
 	textures[0] = LoadTexture("brground.png");
 	textures[1] = LoadTexture("brstonepath.png");
 	textures[2] = LoadTexture("brdoor.png");
 	textures[3] = LoadTexture("brfloor2.png");
 	textures[4] = LoadTexture("brwall.png");
+	textures[5] = LoadTexture("brcoin.png");
 }
 	
 void Unload(void)
@@ -135,6 +142,9 @@ void Unload(void)
 void Inits(void)
 {
     brickSize = (Vector2){ screenWidth/BRICKS_PER_LINE, screenHeight/18 };
+
+	// Init game
+	game.coins = 0;
 
     // Initialize player
 	player.texture = LoadTexture("brdude.png");
@@ -156,18 +166,39 @@ void Inits(void)
     // Initialize bricks
     int initialDownPosition = 50;
 
-    int map[18][32] = {
+    // int map[18][32] = {
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		// {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, // tiles below will not collide
+		// {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		// {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		// {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+        // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+    // };
+	
+	int map[18][32] = {
         {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,3,3,3,3,3,0,0,0,0,0},
         {0,3,3,3,3,3,3,3,0,0,0,0,3,3,3,3,3,0,0,0,3,2,2,2,2,2,3,0,0,0,0,0},
-        {0,3,2,2,2,2,2,1,4,4,0,0,3,2,2,2,3,0,4,4,1,2,2,2,2,2,3,0,0,0,0,0},
-        {0,3,2,2,2,2,2,3,0,4,4,4,1,2,2,2,1,4,4,0,3,2,2,2,2,2,3,0,0,0,0,0},
+        {0,3,2,5,2,2,2,1,4,4,0,0,3,2,5,2,3,0,4,4,1,2,2,2,2,5,3,0,0,0,0,0},
+        {0,3,2,2,2,5,2,3,0,4,4,4,1,2,2,2,1,4,4,0,3,2,2,2,2,2,3,0,0,0,0,0},
         {0,3,2,2,2,2,2,3,0,4,0,0,3,1,3,3,3,0,0,0,3,3,3,3,1,3,3,0,0,0,0,0},
         {0,3,2,2,2,2,2,1,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0},
         {0,3,2,2,2,2,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0},
-        {0,3,2,2,2,2,2,3,0,0,0,0,0,3,3,1,3,3,0,3,3,3,3,1,3,3,3,3,3,3,0,0},
+        {0,3,2,5,2,2,2,3,0,0,0,0,0,3,3,1,3,3,0,3,3,3,3,1,3,3,3,3,3,3,0,0},
         {0,3,3,3,3,3,3,3,0,0,0,0,0,3,2,2,2,3,0,3,2,2,2,2,2,2,2,2,2,3,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,3,2,2,2,3,0,3,2,2,2,2,2,2,2,2,2,3,0,0},
-        {0,0,0,0,0,0,0,0,0,0,0,0,0,3,2,2,2,3,0,3,2,2,2,2,2,2,2,2,2,3,0,0},
+        {0,0,0,0,0,0,0,0,0,0,0,0,0,3,5,2,5,3,0,3,5,2,2,2,2,2,2,2,2,3,0,0},
+        {0,0,0,0,0,0,0,0,0,0,0,0,0,3,2,2,2,3,0,3,2,2,2,2,2,2,2,5,2,3,0,0},
         {0,0,0,0,0,0,0,0,0,0,0,0,0,3,3,1,3,3,0,3,3,3,3,3,3,3,3,1,3,3,0,0},
         {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0},
         {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0}, // tiles below will not collide
@@ -176,6 +207,8 @@ void Inits(void)
 		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0},
 		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0}
     };
+	
+	
     
     // int map[18][32] = {
         // {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -205,18 +238,21 @@ void Inits(void)
             brick[i][j].position = (Vector2){ j*brickSize.x + brickSize.x/2, i*brickSize.y + initialDownPosition };
 			switch (map[i][j]) {
 				case 0: // grass
+					brick[i][j].type = 0;
 					brick[i][j].active = true;
 					brick[i][j].collidable = false;
 					brick[i][j].color = WHITE;
 					brick[i][j].texture = textures[0];
 					break;
 				case 4: // stone path
+					brick[i][j].type = 4;
 					brick[i][j].active = true;
 					brick[i][j].collidable = false;
 					brick[i][j].color = WHITE;
 					brick[i][j].texture = textures[1];
 					break;
 				case 1: // door
+					brick[i][j].type = 1;
 					brick[i][j].hitpoints = 1;
 					brick[i][j].active = true;
 					brick[i][j].collidable = true;
@@ -225,6 +261,7 @@ void Inits(void)
 					brick[i][j].texture = textures[2];
 					break;
 				case 2: // floor
+					brick[i][j].type = 2;
 					brick[i][j].hitpoints = 2;
 					brick[i][j].active = true;
 					brick[i][j].collidable = false;
@@ -233,6 +270,7 @@ void Inits(void)
 					brick[i][j].texture = textures[3];
 					break;
 				case 3: // brick wall
+					brick[i][j].type = 3;
 					brick[i][j].hitpoints = 3;
 					brick[i][j].active = true;
 					brick[i][j].collidable = true;
@@ -240,15 +278,66 @@ void Inits(void)
 					brick[i][j].color = WHITE;
 					brick[i][j].texture = textures[4];
 					break;
+				case 5: // gold coin
+					brick[i][j].type = 5;
+					brick[i][j].hitpoints = 1;
+					brick[i][j].active = true;
+					brick[i][j].collidable = true;
+					brick[i][j].visible = false;
+					brick[i][j].color = WHITE;
+					brick[i][j].texture = textures[5];
+					game.coins++;
+					break;
               default:
             }
         }
     }
 }
 
+
+void BrickCollision(int i, int j)
+{
+	switch (brick[i][j].type) {
+		case 0: // grass
+			break;
+		case 4: // stone path
+			break;
+		case 1: // door
+			brick[i][j].hitpoints--;
+			if (brick[i][j].hitpoints == 0)
+			{
+				brick[i][j].collidable = false;
+				brick[i][j].color = GRAY;
+			}
+			break;
+		case 2: // floor
+			break;
+		case 3: // brick wall
+			brick[i][j].hitpoints--;
+				if (brick[i][j].hitpoints == 0)
+				{
+					brick[i][j].collidable = false;
+					brick[i][j].color = GRAY;
+				}
+			break;
+		case 5: // gold coin
+			brick[i][j].hitpoints--;
+				if (brick[i][j].hitpoints == 0)
+				{
+					brick[i][j].collidable = false;
+					brick[i][j].color = GRAY;
+				}
+			game.coins--;
+			break;
+	  default:
+	}
+}
+
 // Update game (one frame)
 void UpdateGame(void)
 {
+	if (game.coins < 1)
+		gameOver = true;
     if (!gameOver)
     {
         if (IsKeyPressed('P')) pause = !pause;
@@ -315,6 +404,9 @@ void UpdateGame(void)
                             ((ball.position.y - ball.radius) > (brick[i][j].position.y - brickSize.y/8 + ball.speed.y)) &&
                             ((fabs(ball.position.x - brick[i][j].position.x)) < (brickSize.x/2 + ball.radius*2/3)) && (ball.speed.y < 0))
                         {
+							// work here
+							BrickCollision(i, j);
+							
                             brick[i][j].hitpoints--;
                             if (brick[i][j].hitpoints == 0)
                             {
@@ -443,9 +535,11 @@ void DrawGame(void)
 				// dark text (shadow)
 				DrawText("RogueOut!", screenWidth/2 - MeasureText("RogueOut!", 50)/2, screenHeight*3.05/16 - 50, 50, BLACK);
 				DrawText("ARROW KEYS left/right to move, SPACE to launch spell ball!", screenWidth/2 - MeasureText("ARROW KEYS left/right to move, SPACE to launch spell ball!", 50)/2, screenHeight*5.05/16 - 50, 50, BLACK);
+				DrawText("Collect all coins!", screenWidth/2 - MeasureText("Collect all coins!", 50)/2, screenHeight*6.05/16 - 50, 50, BLACK);
 				// light text
 				DrawText("RogueOut!", screenWidth/2 - MeasureText("RogueOut!", 50)/2, screenHeight*3/16 - 50, 50, WHITE);
 				DrawText("ARROW KEYS left/right to move, SPACE to launch spell ball!", screenWidth/2 - MeasureText("ARROW KEYS left/right to move, SPACE to launch spell ball!", 50)/2, screenHeight*5/16 - 50, 50, GREEN);
+				DrawText("Collect all coins!", screenWidth/2 - MeasureText("Collect all coins!", 50)/2, screenHeight*6/16 - 50, 50, GREEN);
 			}
 			
             // Draw player lives
