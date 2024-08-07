@@ -2,7 +2,7 @@
 
 ![image](https://github.com/user-attachments/assets/cfb9e0d8-9d42-439b-a312-bd3e729895c3)
 
-A game prototype made in two days at Assembly Summer Game Jam 2024 using Raylib.
+A game prototype made in two days at Assembly Summer Game Jam 2024 written in C and using the Raylib game development library. For Windows. It should compile on many other platforms with little additional Raylib configuration.
 
 Most of the graphical assets were originally created by Kenney (https://www.kenney.nl) and modified by me. The music was made by vubeo345 (https://linktr.ee/vubeo).
 
